@@ -117,6 +117,16 @@ export const ProfileModal = ({ isOpen, onClose, user, tree, wallet, onUpdateProf
           </button>
 
           <button
+            onClick={() => {
+              onLogout();
+            }}
+            className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <span>🔄</span>
+            <span>{lang === 'hi' ? 'खाता बदलें / Google या अन्य नंबर से लॉगिन करें' : 'Switch Account / Login with Google or Mobile'}</span>
+          </button>
+
+          <button
             onClick={onLogout}
             className="w-full py-2 rounded-xl bg-slate-800 hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 border border-slate-700 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >

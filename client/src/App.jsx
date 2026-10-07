@@ -66,7 +66,7 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, []);
 
-  // Initialize or load demo session
+  // Initialize or load saved session
   useEffect(() => {
     const savedUser = localStorage.getItem('treeniti_user');
     if (savedUser) {
@@ -74,10 +74,11 @@ export default function App() {
         const u = JSON.parse(savedUser);
         fetchUserData(u.id);
       } catch (e) {
-        initDefaultUser();
+        setIsAuthOpen(true);
       }
     } else {
-      initDefaultUser();
+      // Prompt user with login choices (Google / Mobile OTP)
+      setIsAuthOpen(true);
     }
 
     fetchTickers();
