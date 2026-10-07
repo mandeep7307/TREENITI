@@ -216,6 +216,98 @@ app.post('/api/auth/verify-otp', (req, res) => {
   });
 });
 
+// Google Sign-In & Registration
+app.post('/api/auth/google-login', (req, res) => {
+  const { email, name, avatar, googleId, referralCode, deviceId } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Google email is required' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  let user = db.prepare('SELECT * FROM users WHERE email = ? OR (google_id IS NOT NULL AND google_id = ?)').get(cleanEmail, googleId || cleanEmail);
+  let isNewUser = false;
+
+  if (!user) {
+    isNewUser = true;
+    const myRefCode = 'TREE' + Math.floor(100000 + Math.random() * 900000);
+    let referredById = null;
+
+    if (referralCode) {
+      const referrer = db.prepare('SELECT id, name FROM users WHERE referral_code = ?').get(referralCode.trim().toUpperCase());
+      if (referrer) {
+        referredById = referrer.id;
+      }
+    }
+
+    const userPhone = req.body.phone || `G_${Date.now().toString().slice(-8)}_${Math.floor(Math.random() * 1000)}`;
+
+    const insertUser = db.prepare(`
+      INSERT INTO users (phone, email, google_id, name, avatar, role, referral_code, referred_by, device_id)
+      VALUES (?, ?, ?, ?, ?, 'user', ?, ?, ?)
+    `);
+    const result = insertUser.run(
+      userPhone,
+      cleanEmail,
+      googleId || cleanEmail,
+      name || cleanEmail.split('@')[0],
+      avatar || '🌳',
+      myRefCode,
+      referredById,
+      deviceId || 'google_auth'
+    );
+    const userId = result.lastInsertRowid;
+
+    // Create Initial Wallet (150 Welcome Coins)
+    db.prepare(`
+      INSERT INTO wallets (user_id, coins, cash_balance)
+      VALUES (?, 150, 1.5)
+    `).run(userId);
+
+    db.prepare(`
+      INSERT INTO transactions (user_id, type, amount_coins, amount_inr, description)
+      VALUES (?, 'coin_reward', 150, 1.5, 'Welcome Bonus via Google Sign-In! 🌱')
+    `).run(userId);
+
+    // Create Tree
+    db.prepare(`
+      INSERT INTO trees (user_id, tree_name, level, growth_percentage, mood)
+      VALUES (?, 'मेरा कल्पवृक्ष', 1, 5.0, 'Happy')
+    `).run(userId);
+
+    // Reward referrer if applicable (₹5 bonus on friend registration)
+    if (referredById) {
+      const friendBonusCoins = 500;
+      const friendBonusInr = 5.0;
+      db.prepare(`
+        UPDATE wallets 
+        SET coins = coins + ?, referral_earnings = referral_earnings + ?
+        WHERE user_id = ?
+      `).run(friendBonusCoins, friendBonusInr, referredById);
+
+      db.prepare(`
+        INSERT INTO transactions (user_id, type, amount_coins, amount_inr, description)
+        VALUES (?, 'referral_l1', ?, ?, ?)
+      `).run(referredById, friendBonusCoins, friendBonusInr, `Referral Reward: Friend ${cleanEmail.split('@')[0]} joined via Google (₹5 unlocked)`);
+    }
+
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  } else {
+    // Existing user login
+    db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+  }
+
+  const tree = db.prepare('SELECT * FROM trees WHERE user_id = ?').get(user.id);
+  const wallet = db.prepare('SELECT * FROM wallets WHERE user_id = ?').get(user.id);
+
+  res.json({
+    success: true,
+    isNewUser,
+    user,
+    tree,
+    wallet
+  });
+});
+
 // Get User Profile & Full State
 app.get('/api/auth/me/:userId', (req, res) => {
   const { userId } = req.params;

@@ -19,7 +19,9 @@ db.pragma('journal_mode = WAL');
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    phone TEXT UNIQUE NOT NULL,
+    phone TEXT UNIQUE,
+    email TEXT UNIQUE,
+    google_id TEXT UNIQUE,
     name TEXT DEFAULT 'Green Warrior',
     avatar TEXT DEFAULT '🌳',
     language TEXT DEFAULT 'hi',
@@ -191,6 +193,17 @@ db.exec(`
     expires_at INTEGER NOT NULL
   );
 `);
+
+// Safe migrations
+try {
+  db.exec("ALTER TABLE users ADD COLUMN email TEXT");
+} catch (e) {}
+try {
+  db.exec("ALTER TABLE users ADD COLUMN google_id TEXT");
+} catch (e) {}
+try {
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)");
+} catch (e) {}
 
 // Insert default system settings
 const insertSetting = db.prepare(`

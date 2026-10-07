@@ -1,16 +1,47 @@
 import React, { useState } from 'react';
-import { X, Phone, KeyRound, ArrowRight, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
+import { X, Phone, KeyRound, ArrowRight, ShieldCheck, Sparkles, UserCheck, Mail } from 'lucide-react';
 
 export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
-  const [step, setStep] = useState('phone'); // 'phone' or 'otp'
+  const [step, setStep] = useState('phone'); // 'phone', 'otp', 'google_custom'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [demoCode, setDemoCode] = useState('');
+  const [googleEmail, setGoogleEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
+
+  // Google Login Handler
+  const handleGoogleSignIn = async (emailToUse) => {
+    const targetEmail = emailToUse || googleEmail || 'nature.lover@gmail.com';
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth/google-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: targetEmail,
+          name: targetEmail.split('@')[0].replace('.', ' '),
+          avatar: '🌱',
+          referralCode: referralCode.trim()
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Google login failed');
+
+      onLoginSuccess(data);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSendOtp = async (inputPhone) => {
     const targetPhone = inputPhone || phone;
@@ -86,7 +117,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
         </button>
 
         {/* Header */}
-        <div className="text-center mb-5">
+        <div className="text-center mb-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 mx-auto flex items-center justify-center text-2xl shadow-lg mb-2">
             🌱
           </div>
@@ -94,7 +125,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
             {lang === 'hi' ? 'Treeniti में स्वागत है' : 'Welcome to Treeniti'}
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            {lang === 'hi' ? 'मोबाइल नंबर से सुरक्षित लॉगिन करें' : 'Secure Login with Mobile OTP'}
+            {lang === 'hi' ? 'सुरक्षित लॉगिन या नया खाता बनाएं' : 'Secure Login & Green Rewards'}
           </p>
         </div>
 
@@ -104,9 +135,59 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
           </div>
         )}
 
-        {/* Step 1: Phone & Referral */}
+        {/* Step 1: Login Choices (Google & Phone OTP) */}
         {step === 'phone' && (
-          <div className="space-y-3.5">
+          <div className="space-y-4">
+            
+            {/* GOOGLE SIGN IN BUTTON */}
+            <button
+              onClick={() => handleGoogleSignIn('user.green@gmail.com')}
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-2xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-xs sm:text-sm flex items-center justify-center gap-3 shadow-md hover:shadow-lg active:scale-95 transition-all cursor-pointer"
+            >
+              {/* Google Multicolored SVG Logo */}
+              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.26v3.13C3.25 21.36 7.34 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.61H1.26C.46 8.23 0 10.06 0 12s.46 3.77 1.26 5.39l4.02-3.13z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.25 2.64 1.26 6.61l4.02 3.13c.95-2.84 3.6-4.99 6.72-4.99z"
+                />
+              </svg>
+              <span>{lang === 'hi' ? 'Google से साइन-इन करें' : 'Continue with Google'}</span>
+            </button>
+
+            {/* Custom Google Email link */}
+            <div className="text-center -mt-2">
+              <button
+                type="button"
+                onClick={() => setStep('google_custom')}
+                className="text-[11px] text-emerald-400 hover:underline cursor-pointer"
+              >
+                {lang === 'hi' ? 'अन्य Google ईमेल दर्ज करें →' : 'Enter specific Google email →'}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-slate-800"></div>
+              <span className="text-[11px] text-slate-500 font-semibold uppercase">
+                {lang === 'hi' ? 'या मोबाइल नंबर से' : 'OR WITH MOBILE'}
+              </span>
+              <div className="flex-1 h-px bg-slate-800"></div>
+            </div>
+
+            {/* Mobile Number Input */}
             <div>
               <label className="text-xs text-slate-300 font-semibold block mb-1">
                 {lang === 'hi' ? 'मोबाइल नंबर' : 'Mobile Number'}
@@ -124,6 +205,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
               </div>
             </div>
 
+            {/* Referral Code */}
             <div>
               <label className="text-xs text-slate-400 font-medium block mb-1">
                 {lang === 'hi' ? 'रेफरल कोड (वैकल्पिक)' : 'Referral Code (Optional)'}
@@ -137,6 +219,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
               />
             </div>
 
+            {/* Send OTP button */}
             <button
               onClick={() => handleSendOtp()}
               disabled={loading}
@@ -146,8 +229,8 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            {/* Quick Demo Credentials */}
-            <div className="mt-4 pt-3 border-t border-slate-800 space-y-2">
+            {/* Quick Demo Logins */}
+            <div className="pt-3 border-t border-slate-800 space-y-2">
               <span className="text-[10px] text-slate-400 block text-center uppercase tracking-wider font-semibold">
                 ⚡ {lang === 'hi' ? 'त्वरित 1-क्लिक परीक्षण' : 'Quick 1-Click Testing'}
               </span>
@@ -168,6 +251,57 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Step: Custom Google Email Input */}
+        {step === 'google_custom' && (
+          <div className="space-y-3.5">
+            <div>
+              <label className="text-xs text-slate-300 font-semibold block mb-1">
+                {lang === 'hi' ? 'अपना Google ईमेल दर्ज करें' : 'Enter your Google Email'}
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  placeholder="yourname@gmail.com"
+                  value={googleEmail}
+                  onChange={(e) => setGoogleEmail(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-400 font-medium block mb-1">
+                {lang === 'hi' ? 'रेफरल कोड (वैकल्पिक)' : 'Referral Code (Optional)'}
+              </label>
+              <input
+                type="text"
+                placeholder="TREE123456"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-xs uppercase font-mono text-emerald-300 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <button
+              onClick={() => handleGoogleSignIn()}
+              disabled={loading || !googleEmail}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-sm shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+            >
+              <span>{loading ? '...' : (lang === 'hi' ? 'Google खाते से लॉगिन करें' : 'Login with Google')}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep('phone')}
+              className="w-full text-center text-xs text-slate-400 hover:text-white cursor-pointer py-1"
+            >
+              ← {lang === 'hi' ? 'वापस जाएं' : 'Back'}
+            </button>
           </div>
         )}
 
