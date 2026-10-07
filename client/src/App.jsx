@@ -17,7 +17,6 @@ import { ShakeGameModal } from './components/ShakeGameModal';
 import { SpinWheelModal } from './components/SpinWheelModal';
 import { AdBannerModal } from './components/AdBannerModal';
 import { CertificateModal } from './components/CertificateModal';
-import { InstallModal } from './components/InstallModal';
 import { sounds } from './audio';
 import confetti from 'canvas-confetti';
 import { Menu, X, Shield, Award, HelpCircle, Info, FileText, MessageSquare } from 'lucide-react';
@@ -388,7 +387,6 @@ export default function App() {
         wallet={wallet}
         lang={lang}
         onToggleLang={toggleLanguage}
-        onInstallApp={() => setIsInstallOpen(true)}
         onOpenLogin={() => setIsAuthOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenCertificate={() => setIsCertOpen(true)}
@@ -650,14 +648,6 @@ export default function App() {
         onClose={() => setIsCertOpen(false)}
         user={user}
         tree={tree}
-        lang={lang}
-      />
-
-      <InstallModal
-        isOpen={isInstallOpen}
-        onClose={() => setIsInstallOpen(false)}
-        onNativeInstall={handleNativeInstall}
-        deferredPrompt={deferredPrompt}
         lang={lang}
       />
 

@@ -15,6 +15,22 @@ app.use(express.json());
 const uploadsDir = path.join(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadsDir));
 
+// Google Play Store Digital Asset Links verification
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  res.json([
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "org.treeniti.greenapp",
+        sha256_cert_fingerprints: [
+          "14:6D:E9:7F:0F:5C:CF:45:47:4E:AD:A2:4E:51:72:C6:13:4E:9A:89:C8:31:84:82:1C:18:AE:52:19:D4:4B:99"
+        ]
+      }
+    }
+  ]);
+});
+
 // Multer storage for tree photos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

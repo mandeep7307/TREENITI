@@ -77,19 +77,8 @@ export const Navbar = ({
           })}
         </nav>
 
-        {/* Right Controls: Install App, Lang Switcher, Wallet Coins, Profile/Login */}
+        {/* Right Controls: Lang Switcher, Certificate, Wallet Coins, Profile/Login */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          
-          {/* Install Mobile App Button */}
-          <button
-            onClick={onInstallApp}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black cursor-pointer shadow-md active:scale-95 transition-all"
-            title="Install Treeniti App on your mobile device"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{lang === 'hi' ? 'ऐप इंस्टॉल करें' : 'Install App'}</span>
-            <span className="sm:hidden">{lang === 'hi' ? 'ऐप' : 'App'}</span>
-          </button>
 
           {/* Language Switcher (हिंदी / English) */}
           <button
