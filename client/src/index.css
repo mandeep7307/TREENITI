@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #0f172a;
+    color: #f8fafc;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Tree Animations */
+@keyframes shakeTree {
+  0% { transform: rotate(0deg) scale(1); }
+  20% { transform: rotate(-5deg) scale(1.02); }
+  40% { transform: rotate(5deg) scale(0.98); }
+  60% { transform: rotate(-6deg) scale(1.03); }
+  80% { transform: rotate(6deg) scale(0.99); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+@keyframes fruitFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(220px) rotate(180deg); opacity: 0.9; }
+}
+
+@keyframes waterDrop {
+  0% { transform: translateY(0) scale(0.8); opacity: 1; }
+  80% { transform: translateY(120px) scale(1.2); opacity: 0.8; }
+  100% { transform: translateY(140px) scale(1.5); opacity: 0; }
+}
+
+@keyframes floatButterfly {
+  0% { transform: translate(0, 0) scaleX(1); }
+  25% { transform: translate(35px, -20px) scaleX(1); }
+  50% { transform: translate(70px, 10px) scaleX(-1); }
+  75% { transform: translate(25px, 30px) scaleX(-1); }
+  100% { transform: translate(0, 0) scaleX(1); }
+}
+
+@keyframes floatBird {
+  0% { transform: translate(-100px, 0) scale(0.8); }
+  50% { transform: translate(120px, -30px) scale(1); }
+  100% { transform: translate(350px, -10px) scale(0.8); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(34, 197, 94, 0.4)); }
+  50% { filter: drop-shadow(0 0 24px rgba(34, 197, 94, 0.8)); }
+}
+
+.animate-tree-shake {
+  animation: shakeTree 0.5s ease-in-out infinite;
+}
+
+.animate-water-drop {
+  animation: waterDrop 0.8s ease-in forwards;
+}
+
+.animate-falling-fruit {
+  animation: fruitFall 1.2s ease-in forwards;
+}
+
+.animate-butterfly {
+  animation: floatButterfly 6s ease-in-out infinite;
+}
+
+.animate-bird {
+  animation: floatBird 12s linear infinite;
+}
+
+.pulse-glow {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.6);
+}

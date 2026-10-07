@@ -1,0 +1,22 @@
+{
+  "name": "treeniti-platform",
+  "version": "1.0.0",
+  "description": "TREENITI - Green Plantation & Earning Platform (Web & Mobile App)",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "server": "node server/server.js",
+    "client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "install:all": "npm --prefix server install && npm --prefix client install"
+  },
+  "keywords": [
+    "treeniti",
+    "tree-plantation",
+    "gamification",
+    "pwa",
+    "mobile-app"
+  ],
+  "author": "Treeniti Team",
+  "license": "ISC"
+}

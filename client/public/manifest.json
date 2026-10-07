@@ -1,0 +1,19 @@
+{
+  "name": "Treeniti - डिजिटल वृक्षारोपण एवं कमाई",
+  "short_name": "Treeniti",
+  "description": "Plant digital trees, earn real coins & UPI cash, and track real afforestation.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#022c22",
+  "theme_color": "#059669",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
