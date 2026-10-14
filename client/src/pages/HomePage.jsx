@@ -21,6 +21,8 @@ export const HomePage = ({
   onClaim3h,
   onSellFruits,
   onOpenCertificate,
+  onOpenLogin,
+  onShareTreeOpen,
   setActiveTab,
   lang,
   t
@@ -43,6 +45,32 @@ export const HomePage = ({
   return (
     <div className="pb-20 max-w-7xl mx-auto space-y-4">
       
+      {/* Welcome Google Sign-in Banner (Visible if user not logged in) */}
+      {!user && (
+        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 p-4 sm:p-5 rounded-3xl border border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-white shadow-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-3xl shadow-inner">🌱</div>
+            <div>
+              <h3 className="font-extrabold text-sm sm:text-base text-emerald-300">
+                {lang === 'hi' ? 'Treeniti ग्रीन रिवॉर्ड्स में आपका स्वागत है' : 'Welcome to Treeniti Green Rewards'}
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                {lang === 'hi' ? 'डिजिटल पेड़ लगाएं, पर्यावरण की रक्षा करें और असली पैसे कमाएं!' : 'Plant digital trees, save the planet & earn real UPI money!'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={onOpenLogin}
+              className="w-full sm:w-auto py-3 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 text-slate-950 font-black text-xs sm:text-sm shadow-xl transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+            >
+              <span>📱</span>
+              <span>{lang === 'hi' ? 'मोबाइल OTP से लॉगिन करें' : 'Login with Mobile OTP'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 1. सूचना बोर्ड (Live Running Ticker) - Full Width */}
       <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/80 border border-emerald-500/30 rounded-2xl p-2.5 px-4 flex items-center gap-3 shadow-lg overflow-hidden select-none">
         <span className="text-base bg-emerald-500/20 p-1.5 rounded-xl shrink-0">📢</span>
@@ -76,6 +104,7 @@ export const HomePage = ({
             onWater={onWater}
             onFertilize={onFertilize}
             onShake={onShakeOpen}
+            onShareTree={onShareTreeOpen}
             shakeReady={shakeReady}
             shakeWaitSec={shakeWaitSec}
             lang={lang}

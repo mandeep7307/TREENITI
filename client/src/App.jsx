@@ -17,6 +17,7 @@ import { ShakeGameModal } from './components/ShakeGameModal';
 import { SpinWheelModal } from './components/SpinWheelModal';
 import { AdBannerModal } from './components/AdBannerModal';
 import { CertificateModal } from './components/CertificateModal';
+import { ShareTreeModal } from './components/ShareTreeModal';
 import { sounds } from './audio';
 import confetti from 'canvas-confetti';
 import { Menu, X, Shield, Award, HelpCircle, Info, FileText, MessageSquare } from 'lucide-react';
@@ -42,6 +43,7 @@ export default function App() {
   const [isSpinOpen, setIsSpinOpen] = useState(false);
   const [isAdOpen, setIsAdOpen] = useState(false);
   const [isCertOpen, setIsCertOpen] = useState(false);
+  const [isShareTreeOpen, setIsShareTreeOpen] = useState(false);
   const [isInstallOpen, setIsInstallOpen] = useState(false);
 
   // Native PWA deferred prompt
@@ -197,8 +199,8 @@ export default function App() {
     }, 1200);
   };
 
-  // Fertilizer Action
-  const handleFertilize = async () => {
+  // Fertilizer / Pesticide Action (खाद और कीटनाशक)
+  const handleFertilize = async (type = 'organic_fertilizer') => {
     if (!user) {
       setIsAuthOpen(true);
       return;
@@ -210,7 +212,7 @@ export default function App() {
       const res = await fetch('/api/tree/fertilizer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
+        body: JSON.stringify({ userId: user.id, type })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -442,6 +444,8 @@ export default function App() {
             onClaim3h={handleClaim3h}
             onSellFruits={handleSellFruits}
             onOpenCertificate={() => setIsCertOpen(true)}
+            onOpenLogin={() => setIsAuthOpen(true)}
+            onShareTreeOpen={() => setIsShareTreeOpen(true)}
             setActiveTab={setActiveTab}
             lang={lang}
             t={t}
@@ -647,6 +651,14 @@ export default function App() {
       <CertificateModal
         isOpen={isCertOpen}
         onClose={() => setIsCertOpen(false)}
+        user={user}
+        tree={tree}
+        lang={lang}
+      />
+
+      <ShareTreeModal
+        isOpen={isShareTreeOpen}
+        onClose={() => setIsShareTreeOpen(false)}
         user={user}
         tree={tree}
         lang={lang}

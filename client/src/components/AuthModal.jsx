@@ -1,51 +1,21 @@
 import React, { useState } from 'react';
-import { X, Phone, KeyRound, ArrowRight, ShieldCheck, Sparkles, UserCheck, Mail } from 'lucide-react';
+import { X, Phone, KeyRound, ArrowRight, ShieldCheck, Sparkles, UserCheck, Mail, Smartphone } from 'lucide-react';
+import { sendFirebaseOtp, verifyFirebaseOtp } from '../firebase';
 
 export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
-  const [step, setStep] = useState('main'); // 'main' (Google + Phone) or 'otp'
+  const [step, setStep] = useState('main'); // 'main' or 'otp'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [demoCode, setDemoCode] = useState('');
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
-  const [showCustomGoogle, setShowCustomGoogle] = useState(false);
+  const [useRealSms, setUseRealSms] = useState(false); // Toggle between Firebase Real SMS and Fast Local/Demo Mode
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  // Google Login Handler
-  const handleGoogleSignIn = async (emailToUse) => {
-    const targetEmail = emailToUse || customGoogleEmail || 'user.nature@gmail.com';
-    setLoading(true);
-    setError('');
-
-    try {
-      const res = await fetch('/api/auth/google-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: targetEmail,
-          name: targetEmail.split('@')[0].replace('.', ' '),
-          avatar: '🌱',
-          referralCode: referralCode.trim()
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Google login failed');
-
-      onLoginSuccess(data);
-      onClose();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Send Mobile OTP
-  const handleSendOtp = async (inputPhone) => {
+  // Send Mobile OTP (Supports Google Firebase Real SMS + Instant Demo)
+  const handleSendOtp = async (inputPhone, forceLocal = false) => {
     const targetPhone = inputPhone || phone;
     if (!targetPhone || targetPhone.length < 10) {
       setError(lang === 'hi' ? 'कृपया 10 अंकों का मोबाइल नंबर दर्ज करें' : 'Please enter valid 10-digit mobile number');
@@ -54,6 +24,29 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
 
     setLoading(true);
     setError('');
+
+    // If Real SMS mode is enabled and not a quick demo click
+    if (useRealSms && !forceLocal && targetPhone !== '9999999999') {
+      try {
+        const fullPhone = targetPhone.startsWith('+') ? targetPhone : `+91${targetPhone}`;
+        await sendFirebaseOtp(fullPhone);
+        setDemoCode('');
+        setOtp('');
+        setStep('otp');
+      } catch (firebaseErr) {
+        console.error('Firebase Real SMS Error:', firebaseErr);
+        setError(firebaseErr.message?.includes('api-key-not-valid')
+          ? (lang === 'hi'
+              ? 'Firebase API Key सेट नहीं है। कृपया client/src/firebase.js में अपनी कीज़ डालें या टेस्ट मोड चालू रखें।'
+              : 'Firebase API key is not configured yet in client/src/firebase.js. Please use test mode or enter your keys.')
+          : firebaseErr.message || 'Failed to send Real SMS via Firebase');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Default Fast Mode
     try {
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
@@ -82,6 +75,37 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
 
     setLoading(true);
     setError('');
+
+    // If Real SMS Firebase Verification
+    if (useRealSms && phone !== '9999999999' && !demoCode) {
+      try {
+        const firebaseUser = await verifyFirebaseOtp(otp);
+        // Inform backend about successful phone authentication
+        const res = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone,
+            code: otp,
+            referralCode,
+            firebaseVerified: true,
+            firebaseUid: firebaseUser?.uid
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Login synchronization failed');
+
+        onLoginSuccess(data);
+        onClose();
+        return;
+      } catch (err) {
+        setError(err.message || 'Invalid Firebase Real SMS OTP code');
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Default Local Verification
     try {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
@@ -104,7 +128,7 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
   const quickLogin = (presetPhone, presetCode) => {
     setPhone(presetPhone);
     setOtp(presetCode);
-    handleSendOtp(presetPhone);
+    handleSendOtp(presetPhone, true);
   };
 
   return (
@@ -138,76 +162,39 @@ export const AuthModal = ({ isOpen, onClose, onLoginSuccess, lang, t }) => {
           </div>
         )}
 
-        {/* MAIN VIEW: GOOGLE + MOBILE OTP BOTH VISIBLE */}
+        {/* MAIN VIEW: MOBILE OTP LOGIN */}
         {step === 'main' && (
           <div className="space-y-4">
-            
-            {/* 1. GOOGLE SIGN-IN BUTTON (TOP & PROMINENT) */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => handleGoogleSignIn('green.user@gmail.com')}
-                disabled={loading}
-                className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-100 active:scale-95 text-slate-800 font-extrabold text-sm flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transition-all cursor-pointer border border-slate-200"
-              >
-                {/* Official Google SVG Logo */}
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"/>
-                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.26v3.13C3.25 21.36 7.34 24 12 24z"/>
-                  <path fill="#FBBC05" d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.61H1.26C.46 8.23 0 10.06 0 12s.46 3.77 1.26 5.39l4.02-3.13z"/>
-                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.25 2.64 1.26 6.61l4.02 3.13c.95-2.84 3.6-4.99 6.72-4.99z"/>
-                </svg>
-                <span>{lang === 'hi' ? 'Sign up with Google (गूगल से लॉगिन)' : 'Sign up with Google'}</span>
-              </button>
-
-              {/* Optional Custom Gmail Toggle */}
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => setShowCustomGoogle(!showCustomGoogle)}
-                  className="text-[11px] text-emerald-400 hover:underline cursor-pointer"
-                >
-                  {showCustomGoogle
-                    ? (lang === 'hi' ? 'छिपाएं' : 'Hide')
-                    : (lang === 'hi' ? 'अन्य Google ईमेल दर्ज करना चाहते हैं? यहाँ क्लिक करें' : 'Want to enter custom Google email? Click here')}
-                </button>
-              </div>
-
-              {showCustomGoogle && (
-                <div className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="email"
-                      placeholder="yourname@gmail.com"
-                      value={customGoogleEmail}
-                      onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-600 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleGoogleSignIn(customGoogleEmail)}
-                    disabled={loading || !customGoogleEmail}
-                    className="w-full py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs cursor-pointer"
-                  >
-                    {lang === 'hi' ? 'इस ईमेल से Google लॉगिन करें' : 'Login with this Google Email'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* DIVIDER */}
-            <div className="flex items-center gap-3 my-2">
-              <div className="flex-1 h-px bg-slate-700"></div>
-              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                {lang === 'hi' ? 'या मोबाइल OTP से' : 'OR WITH MOBILE OTP'}
-              </span>
-              <div className="flex-1 h-px bg-slate-700"></div>
-            </div>
 
             {/* 2. MOBILE NUMBER & OTP SECTION */}
             <div className="space-y-3">
+              {/* Invisible Google reCAPTCHA Anchor for Firebase */}
+              <div id="recaptcha-container"></div>
+
+              {/* Free Real SMS Toggle */}
+              <div className="p-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <Smartphone className={`w-4 h-4 ${useRealSms ? 'text-emerald-400' : 'text-slate-400'}`} />
+                  <div>
+                    <span className="font-bold text-white block">
+                      {lang === 'hi' ? 'वास्तविक SMS OTP (Real SMS)' : 'Real SMS OTP Mode'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block">
+                      {useRealSms ? (lang === 'hi' ? 'फोन पर असली SMS आएगा' : 'Sends real SMS to phone') : (lang === 'hi' ? 'फास्ट डेमो मोड सक्रिय' : 'Instant testing mode active')}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUseRealSms(!useRealSms)}
+                  className={`px-2.5 py-1 rounded-xl font-bold text-[11px] transition-all cursor-pointer ${
+                    useRealSms ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  {useRealSms ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
               <div>
                 <label className="text-xs text-slate-300 font-semibold block mb-1">
                   {lang === 'hi' ? 'मोबाइल नंबर' : 'Mobile Number'}

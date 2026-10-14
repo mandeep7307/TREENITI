@@ -113,7 +113,7 @@ export const Navbar = ({
             </div>
           )}
 
-          {/* User Profile / Login Button */}
+          {/* User Profile / Login Buttons */}
           {user ? (
             <button
               onClick={onOpenProfile}
@@ -122,13 +122,15 @@ export const Navbar = ({
               <span>{user.avatar || '👤'}</span>
             </button>
           ) : (
-            <button
-              onClick={onOpenLogin}
-              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md transition-all cursor-pointer active:scale-95"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>{t.login}</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={onOpenLogin}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md transition-all cursor-pointer active:scale-95"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>{t.login}</span>
+              </button>
+            </div>
           )}
 
         </div>

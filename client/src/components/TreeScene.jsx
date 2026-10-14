@@ -10,11 +10,13 @@ export const TreeScene = ({
   onWater,
   onFertilize,
   onShake,
+  onShareTree,
   shakeReady,
   shakeWaitSec,
   lang,
   t
 }) => {
+  const [showCareMenu, setShowCareMenu] = useState(false);
   const level = tree?.level || 1;
   const growth = tree?.growth_percentage || 5;
   const mood = tree?.mood || 'Happy';
@@ -46,6 +48,16 @@ export const TreeScene = ({
       </div>
 
       <div className="absolute top-4 right-6 flex items-center gap-2">
+        {onShareTree && (
+          <button
+            onClick={onShareTree}
+            className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-md"
+            title={lang === 'hi' ? 'पेड़ की फोटो शेयर करें' : 'Share Tree Image'}
+          >
+            <span>📸</span>
+            <span className="hidden sm:inline">{lang === 'hi' ? 'शेयर' : 'Share'}</span>
+          </button>
+        )}
         <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
           <Apple className="w-3.5 h-3.5" />
           <span>{tree?.fruits_count || 0} {lang === 'hi' ? 'फल' : 'Fruits'}</span>
@@ -269,16 +281,51 @@ export const TreeScene = ({
           <span className="text-[10px] text-cyan-200 font-normal">+15 {t.coins}</span>
         </button>
 
-        {/* Game 1: Fertilizer / Pesticide Button */}
-        <button
-          onClick={onFertilize}
-          disabled={isFertilizing}
-          className="flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-800 hover:from-emerald-500 hover:to-emerald-700 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg border border-emerald-400/40 transition-all cursor-pointer"
-        >
-          <Sparkles className={`w-5 h-5 mb-1 text-emerald-200 ${isFertilizing ? 'animate-spin' : ''}`} />
-          <span className="text-center">{lang === 'hi' ? 'खाद व दवा' : 'Fertilizer'}</span>
-          <span className="text-[10px] text-emerald-200 font-normal">+25 {t.coins}</span>
-        </button>
+        {/* Game 1: Fertilizer / Pesticide Button (खाद और कीटनाशक) */}
+        <div className="relative">
+          <button
+            onClick={() => setShowCareMenu(!showCareMenu)}
+            disabled={isFertilizing}
+            className="w-full h-full flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-2xl bg-gradient-to-b from-emerald-600 to-emerald-800 hover:from-emerald-500 hover:to-emerald-700 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-lg border border-emerald-400/40 transition-all cursor-pointer"
+          >
+            <Sparkles className={`w-5 h-5 mb-1 text-emerald-200 ${isFertilizing ? 'animate-spin' : ''}`} />
+            <span className="text-center">{lang === 'hi' ? 'खाद व दवा ⚡' : 'Care & Shield ⚡'}</span>
+            <span className="text-[10px] text-emerald-200 font-normal">{lang === 'hi' ? 'चुनें' : 'Options'}</span>
+          </button>
+
+          {/* Care Menu Dropdown for Organic Fertilizer vs Natural Pesticide */}
+          {showCareMenu && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-44 bg-slate-900 border border-emerald-500/40 rounded-2xl p-2 shadow-2xl z-30 space-y-1.5 backdrop-blur-md">
+              <button
+                onClick={() => {
+                  setShowCareMenu(false);
+                  onFertilize('organic_fertilizer');
+                }}
+                className="w-full text-left p-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-800/80 border border-emerald-500/30 text-white cursor-pointer transition-all flex items-center gap-2"
+              >
+                <span className="text-base">🌿</span>
+                <div>
+                  <span className="text-xs font-bold block">{lang === 'hi' ? 'जैविक खाद' : 'Bio Fertilizer'}</span>
+                  <span className="text-[10px] text-emerald-300 block">+25 🪙 • +1.0%</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowCareMenu(false);
+                  onFertilize('natural_pesticide');
+                }}
+                className="w-full text-left p-2 rounded-xl bg-teal-950/80 hover:bg-teal-800/80 border border-teal-500/30 text-white cursor-pointer transition-all flex items-center gap-2"
+              >
+                <span className="text-base">🛡️</span>
+                <div>
+                  <span className="text-xs font-bold text-teal-200 block">{lang === 'hi' ? 'कीटनाशक रक्षा' : 'Pesticide Shield'}</span>
+                  <span className="text-[10px] text-amber-300 block">+35 🪙 • +1.5% Boost</span>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Game 2: Shake Tree Button */}
         <button

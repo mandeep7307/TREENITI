@@ -137,16 +137,22 @@ app.post('/api/auth/send-otp', (req, res) => {
   });
 });
 
-// Verify OTP & Login
+// Verify OTP & Login (Supports Firebase Real SMS verification & Local Codes)
 app.post('/api/auth/verify-otp', (req, res) => {
-  const { phone, code, referralCode, deviceId } = req.body;
-  if (!phone || !code) {
-    return res.status(400).json({ error: 'Phone and OTP are required' });
+  const { phone, code, referralCode, deviceId, firebaseVerified } = req.body;
+  if (!phone) {
+    return res.status(400).json({ error: 'Phone number is required' });
   }
 
-  const otpRecord = db.prepare('SELECT * FROM otp_codes WHERE phone = ?').get(phone);
-  if (!otpRecord || otpRecord.code !== code.trim()) {
-    return res.status(400).json({ error: 'Invalid or expired OTP code' });
+  // If not already verified via Google Firebase Real SMS Auth, verify against DB
+  if (!firebaseVerified) {
+    if (!code) {
+      return res.status(400).json({ error: 'OTP code is required' });
+    }
+    const otpRecord = db.prepare('SELECT * FROM otp_codes WHERE phone = ?').get(phone);
+    if (!otpRecord || otpRecord.code !== code.trim()) {
+      return res.status(400).json({ error: 'Invalid or expired OTP code' });
+    }
   }
 
   let user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
@@ -330,8 +336,34 @@ app.get('/api/auth/me/:userId', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const tree = db.prepare('SELECT * FROM trees WHERE user_id = ?').get(user.id);
+  let tree = db.prepare('SELECT * FROM trees WHERE user_id = ?').get(user.id);
   const wallet = db.prepare('SELECT * FROM wallets WHERE user_id = ?').get(user.id);
+
+  // Dynamic Tree Mood evaluation
+  // Excited: watered/fertilized in last 2 hours
+  // Happy: watered in last 12 hours
+  // Waiting: watered 12 to 24 hours ago
+  // Sad: not watered for more than 24 hours
+  if (tree && tree.last_watered_at) {
+    const lastWateredTime = new Date(tree.last_watered_at).getTime();
+    const hoursSinceWater = (Date.now() - lastWateredTime) / (1000 * 60 * 60);
+    let calculatedMood = tree.mood;
+
+    if (hoursSinceWater > 24) {
+      calculatedMood = 'Sad';
+    } else if (hoursSinceWater > 12) {
+      calculatedMood = 'Waiting';
+    } else if (hoursSinceWater <= 2 && tree.mood === 'Excited') {
+      calculatedMood = 'Excited';
+    } else {
+      calculatedMood = 'Happy';
+    }
+
+    if (calculatedMood !== tree.mood) {
+      db.prepare('UPDATE trees SET mood = ? WHERE id = ?').run(calculatedMood, tree.id);
+      tree.mood = calculatedMood;
+    }
+  }
 
   res.json({ user, tree, wallet });
 });
@@ -367,7 +399,7 @@ app.post('/api/tree/water', (req, res) => {
   let dailyGrowth = tree.last_growth_date === today ? tree.daily_growth_today : 0.0;
 
   const maxDailyLimitSetting = db.prepare("SELECT value FROM system_settings WHERE key = 'daily_growth_limit'").get();
-  const maxLimit = parseFloat(maxDailyLimitSetting ? maxDailyLimitSetting.value : 4.0);
+  const maxLimit = parseFloat(maxDailyLimitSetting ? maxDailyLimitSetting.value : 6.0);
 
   if (dailyGrowth >= maxLimit) {
     return res.status(400).json({
@@ -434,20 +466,24 @@ app.post('/api/tree/fertilizer', (req, res) => {
 
   const today = getTodayKey();
   let dailyGrowth = tree.last_growth_date === today ? tree.daily_growth_today : 0.0;
-  const maxLimit = 4.0;
+  const maxDailyLimitSetting = db.prepare("SELECT value FROM system_settings WHERE key = 'daily_growth_limit'").get();
+  const maxLimit = parseFloat(maxDailyLimitSetting ? maxDailyLimitSetting.value : 6.0);
 
   if (dailyGrowth >= maxLimit) {
     return res.status(400).json({
-      error: `आज का पोषण कोटा (4%) पूरा हो चुका है!`,
-      error_en: `Today's nutrition limit of 4% is already complete!`
+      error: `आज का पोषण कोटा (${maxLimit}%) पूरा हो चुका है! कल फिर पोषण दें।`,
+      error_en: `Today's nutrition limit of ${maxLimit}% is already complete! Care again tomorrow.`
     });
   }
 
-  const growthIncrement = 1.0;
+  const isPesticide = type === 'natural_pesticide';
+  const growthIncrement = isPesticide ? 1.5 : 1.0; // Special powerup bonus
   const newDailyGrowth = Math.min(maxLimit, dailyGrowth + growthIncrement);
   const newGrowth = Math.min(100.0, tree.growth_percentage + growthIncrement);
   const newLevel = calculateTreeLevel(newGrowth);
-  const rewardCoins = 25;
+  const rewardCoins = isPesticide ? 35 : 25;
+  const actionName = isPesticide ? 'कीटनाशक रक्षा शील्ड' : 'जैविक खाद पोषण';
+  const actionNameEn = isPesticide ? 'Natural Pesticide Shield' : 'Organic Fertilizer Boost';
 
   db.prepare(`
     UPDATE trees 
@@ -465,10 +501,10 @@ app.post('/api/tree/fertilizer', (req, res) => {
   db.prepare('UPDATE wallets SET coins = coins + ? WHERE user_id = ?').run(rewardCoins, userId);
   db.prepare(`
     INSERT INTO transactions (user_id, type, amount_coins, amount_inr, description)
-    VALUES (?, 'fertilizer_reward', ?, ?, 'Organic Fertilizer & Care Reward 🌿')
-  `).run(userId, rewardCoins, rewardCoins / 100);
+    VALUES (?, 'fertilizer_reward', ?, ?, ?)
+  `).run(userId, rewardCoins, rewardCoins / 100, `${actionNameEn} (+${growthIncrement}% Power-up) 🌿🛡️`);
 
-  distributeCommission(userId, rewardCoins, 'Organic Fertilizer Action');
+  distributeCommission(userId, rewardCoins, actionNameEn);
 
   const msg = db.prepare(`
     SELECT * FROM tree_messages 
@@ -481,11 +517,16 @@ app.post('/api/tree/fertilizer', (req, res) => {
 
   res.json({
     success: true,
-    message: msg ? msg.message_hi : 'जैविक खाद से पेड़ हरा-भरा और सुरक्षित हो गया!',
-    message_en: msg ? msg.message_en : 'Organic fertilizer revitalized and protected your tree!',
+    message: isPesticide
+      ? 'कीटनाशक सुरक्षा कवच सक्रिय! पेड़ कीटों से सुरक्षित है और तेजी से बढ़ रहा है! 🛡️'
+      : (msg ? msg.message_hi : 'जैविक खाद से पेड़ हरा-भरा और पोषित हो गया! 🌿'),
+    message_en: isPesticide
+      ? 'Natural Pesticide Shield activated! Tree protected from pests with +1.5% boost! 🛡️'
+      : (msg ? msg.message_en : 'Organic fertilizer revitalized and nourished your tree! 🌿'),
     tree: updatedTree,
     wallet: updatedWallet,
-    earnedCoins: rewardCoins
+    earnedCoins: rewardCoins,
+    powerUpType: type || 'organic_fertilizer'
   });
 });
 

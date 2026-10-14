@@ -10,10 +10,12 @@ export const AdminPage = ({ adminUser, lang, t }) => {
   const [plantations, setPlantations] = useState([]);
   const [articles, setArticles] = useState([]);
   const [tickers, setTickers] = useState([]);
+  const [treeMessages, setTreeMessages] = useState([]);
+  const [newMsg, setNewMsg] = useState({ trigger_type: 'thank_you', level_min: 1, message_hi: '', message_en: '' });
   const [settings, setSettings] = useState({
     coin_rate: '100',
     min_withdrawal: '10',
-    daily_growth_limit: '4.0',
+    daily_growth_limit: '6.0',
     fruit_coin_value: '50'
   });
   const [searchUser, setSearchUser] = useState('');
@@ -44,6 +46,7 @@ export const AdminPage = ({ adminUser, lang, t }) => {
     fetchPlantations();
     fetchArticles();
     fetchTickers();
+    fetchTreeMessages();
     fetchSettings();
   }, []);
 
@@ -97,6 +100,40 @@ export const AdminPage = ({ adminUser, lang, t }) => {
       const res = await fetch('/api/tickers');
       const data = await res.json();
       setTickers(data.tickers || []);
+    } catch (e) {}
+  };
+
+  const fetchTreeMessages = async () => {
+    try {
+      const res = await fetch('/api/admin/tree-messages', { headers: adminHeaders });
+      const data = await res.json();
+      setTreeMessages(data.messages || []);
+    } catch (e) {}
+  };
+
+  const handleCreateMsg = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/admin/tree-messages', {
+        method: 'POST',
+        headers: adminHeaders,
+        body: JSON.stringify(newMsg)
+      });
+      if (res.ok) {
+        sounds.playCoin();
+        setNewMsg({ trigger_type: 'thank_you', level_min: 1, message_hi: '', message_en: '' });
+        fetchTreeMessages();
+      }
+    } catch (e) {}
+  };
+
+  const handleDeleteMsg = async (id) => {
+    try {
+      await fetch(`/api/admin/tree-messages/${id}`, {
+        method: 'DELETE',
+        headers: adminHeaders
+      });
+      fetchTreeMessages();
     } catch (e) {}
   };
 
@@ -272,6 +309,7 @@ export const AdminPage = ({ adminUser, lang, t }) => {
           { id: 'withdrawals', label: 'Withdrawals', icon: ArrowDownCircle },
           { id: 'plantations', label: 'Plantations', icon: Camera },
           { id: 'articles', label: 'Articles', icon: BookOpen },
+          { id: 'messages', label: 'Tree Messages', icon: Bell },
           { id: 'tickers', label: 'Notice Board', icon: Bell },
           { id: 'settings', label: 'Settings', icon: Settings }
         ].map((tab) => {
@@ -575,7 +613,91 @@ export const AdminPage = ({ adminUser, lang, t }) => {
         </div>
       )}
 
-      {/* 6. NOTICE BOARD & TICKERS */}
+      {/* 6. TREE TALKING MESSAGES MANAGEMENT */}
+      {activeTab === 'messages' && (
+        <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 space-y-4">
+          <form onSubmit={handleCreateMsg} className="space-y-3 bg-slate-800/60 p-4 rounded-2xl border border-slate-700 text-xs">
+            <h3 className="font-bold text-emerald-400">नया ट्री टॉकिंग मैसेज जोड़ें (Tree Talking Speech Bubble)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label className="text-slate-400 block mb-1">Trigger Type</label>
+                <select
+                  value={newMsg.trigger_type}
+                  onChange={(e) => setNewMsg({ ...newMsg, trigger_type: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="thank_you">Thank You (धन्यवाद)</option>
+                  <option value="water">Water Response (पानी)</option>
+                  <option value="fertilizer">Fertilizer Response (खाद)</option>
+                  <option value="shake">Shake Fruit (पेड़ हिलाना)</option>
+                  <option value="random">Random Nature Fact (ज्ञान)</option>
+                  <option value="need_water">Need Water Alert (प्यास)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-slate-400 block mb-1">Min Level (1-7)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="7"
+                  value={newMsg.level_min}
+                  onChange={(e) => setNewMsg({ ...newMsg, level_min: parseInt(e.target.value) })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+            </div>
+
+            <input
+              type="text"
+              placeholder="मैसेज हिंदी में (e.g. धन्यवाद! आपने मुझे पानी दिया...)"
+              value={newMsg.message_hi}
+              onChange={(e) => setNewMsg({ ...newMsg, message_hi: e.target.value })}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Message in English (e.g. Thank you! You watered me...)"
+              value={newMsg.message_en}
+              onChange={(e) => setNewMsg({ ...newMsg, message_en: e.target.value })}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"
+              required
+            />
+
+            <button
+              type="submit"
+              className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black cursor-pointer shadow-md"
+            >
+              Add Tree Message
+            </button>
+          </form>
+
+          {/* Messages list */}
+          <div className="space-y-2">
+            {treeMessages.map((msg) => (
+              <div key={msg.id} className="p-3 rounded-2xl bg-slate-800/60 border border-slate-700 flex items-center justify-between text-xs gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">
+                      {msg.trigger_type} (L{msg.level_min}+)
+                    </span>
+                  </div>
+                  <span className="font-bold text-white block">💬 {msg.message_hi}</span>
+                  <span className="text-[10px] text-slate-400 block">{msg.message_en}</span>
+                </div>
+                <button
+                  onClick={() => handleDeleteMsg(msg.id)}
+                  className="p-1.5 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 cursor-pointer shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 7. NOTICE BOARD & TICKERS */}
       {activeTab === 'tickers' && (
         <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 space-y-4">
           <form onSubmit={handleCreateTicker} className="space-y-2.5 bg-slate-800/60 p-4 rounded-2xl border border-slate-700 text-xs">

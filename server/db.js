@@ -214,7 +214,7 @@ const insertSetting = db.prepare(`
 const defaultSettings = [
   { key: 'coin_rate', value: '100', description: 'Coins required for 1 Rupee (100 coins = ₹1)' },
   { key: 'min_withdrawal', value: '10', description: 'Minimum withdrawal amount in INR' },
-  { key: 'daily_growth_limit', value: '4.0', description: 'Maximum daily tree growth percentage' },
+  { key: 'daily_growth_limit', value: '6.0', description: 'Maximum daily tree growth percentage (5%-7% logic)' },
   { key: 'fruit_coin_value', value: '50', description: 'Coins per harvested fruit' },
   { key: 'referral_l1_percent', value: '5', description: 'Lifetime commission % for Level 1 referral' },
   { key: 'referral_l2_percent', value: '2', description: 'Lifetime commission % for Level 2 referral' },
